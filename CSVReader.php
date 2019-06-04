@@ -5,7 +5,7 @@ $files = scandir($path);
 
 echo "----------------------------------\n";
 echo "Files list: " . "\n";
-$mask = "|%5.5s |%-30.30s \n";
+$mask = "%5s |%-30s \n";
 for ($i = 2; $i < count($files); $i++) {
     printf($mask, "[$i]", $files[$i]);
 }
@@ -40,6 +40,7 @@ if ($file = fopen($path . $file_name, "r")) {
 
     $line_count = 0;
     
+    // Transfer csv data to array 
     while (($line = fgetcsv($file, 10000, ",")) !== false) {
         $lines[] = array_combine($headers, $line);
 
@@ -125,7 +126,7 @@ function createCSV($file_name, $data) {
 
     for ($i = 0; $i < count($data); $i++) {
         $values = array_values($data[$i]);
-        fputcsv($file, trim($values));
+        fputcsv($file, $values);
         $transfer_count++;
     }
 
