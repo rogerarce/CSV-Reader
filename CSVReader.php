@@ -1,87 +1,129 @@
 <?php
 
-$path = "./documents/";
-$files = scandir($path);
+$complete = false;
+$logs = [];
 
-echo "----------------------------------\n";
-echo "Files list: " . "\n";
-$mask = "%5s |%-30s \n";
-for ($i = 2; $i < count($files); $i++) {
-    printf($mask, "[$i]", $files[$i]);
+while (!$complete) {
+    $logs[] = startReader($logs);
+
+    echo "\n Complete Reader? [Y/n]: ";
+    $response = getInput();
+
+    if (strtolower($response) == 'y') {
+        $complete = true;
+    }
+
+    system('clear');
+    // Missing Features Add CSV Files
+    // Remove Duplicates
+    // Get Related data from other CSV file.
 }
 
-echo "Select file: ";
-$index = (int)getInput();
-$file_name = $files[$index];
+displayLogs($logs);
 
-$headers = null;
+function displayLogs($logs) {
+    echo "Transaction Logs per Document: \n";
 
-$lines = [];
-$output = [];
+    $mask = "%10.5s| %-30.30s | %-30.30s\n";
 
-if ($file = fopen($path . $file_name, "r")) {
+    printf($mask, "Document Name", "Line Count", "Transferred Data");
 
-    $line = fgetcsv($file, 10000, ",");
+    foreach ($logs as $log) {
+        printf($mask, $log['document_name'], $log['document_lines'], $log['transferred_data']);
+    }
+}
 
-    displayFields($line) . "\n";
+function startReader($logs) {
+    $path = "./documents/";
+    $files = scandir($path);
 
-    echo "\n\n Enter indexes to use (comma separated): " . "\n";
-    $fields_to_use = explode(",", getInput());
-
-    echo "\n\n Enter new column names (comma separated): " . "\n";
-    $fields_name = explode(",", getInput());
-
-    echo "\n Enter filename to save data: " . "\n";
-    $output_file = getInput();
-
-    if (!$headers) {
-        $headers = $line;
+    echo "----------------------------------\n";
+    echo "Files list: " . "\n";
+    $mask = "%5s |%-30s \n";
+    for ($i = 2; $i < count($files); $i++) {
+        printf($mask, "[$i]", $files[$i]);
     }
 
-    $line_count = 0;
-    
-    // Transfer csv data to array 
-    while (($line = fgetcsv($file, 10000, ",")) !== false) {
-        $lines[] = array_combine($headers, $line);
+    echo "Select file: ";
+    $index = (int)getInput();
+    $file_name = $files[$index];
 
-        $line_count++;
-    }
+    $headers = null;
 
-    echo "Gathering data from $file_name... \n\n";
+    $lines = [];
+    $output = [];
 
-    try {
-        for ($i = 0; $i < count($lines); $i++) {
-            $row = $lines[$i];
+    if ($file = fopen($path . $file_name, "r")) {
 
-            $new_row_val = [];
+        $line = fgetcsv($file, 10000, ",");
 
-            foreach ($fields_to_use as $key) {
-                $key = $key;
-                $index = $headers[$key];
-                $new_row_val[] = $row[$index] . "\n";
-            }
+        displayFields($line) . "\n";
 
-            $output[] = array_combine($fields_name, $new_row_val);
+        echo "\n\n Enter indexes to use (comma separated): " . "\n";
+        $fields_to_use = explode(",", getInput());
+
+        echo "\n\n Enter new column names (comma separated): " . "\n";
+        $fields_name = explode(",", getInput());
+
+        echo "\n Enter filename to save data: " . "\n";
+        $output_file = getInput();
+
+        if (!$headers) {
+            $headers = $line;
         }
-    } catch (Exception $e) {
-        echo $e->getMessage() . "\n"; 
+
+        $line_count = 0;
+        
+        // Transfer csv data to array 
+        while (($line = fgetcsv($file, 10000, ",")) !== false) {
+            $lines[] = array_combine($headers, $line);
+
+            $line_count++;
+        }
+
+        echo "Gathering data from $file_name... \n\n";
+
+        try {
+            for ($i = 0; $i < count($lines); $i++) {
+                $row = $lines[$i];
+
+                $new_row_val = [];
+
+                foreach ($fields_to_use as $key) {
+                    $key = $key;
+                    $index = $headers[$key];
+                    $new_row_val[] = $row[$index] . "\n";
+                }
+
+                $output[] = array_combine($fields_name, $new_row_val);
+            }
+        } catch (Exception $e) {
+            echo $e->getMessage() . "\n"; 
+        }
+
+        sleep(10);
+
+        $mask = "%5s |%-30s \n";
+        printf($mask, $line_count, "Total lines gathered from document");
+        printf($mask, count($output), "Total gathered data");
+
+        echo "\nTransferring gathered data to $output_file\n";
+        $transfer_count = createCSV($output_file, $output);
+
+        sleep(10);
+
+        echo "Data transfer complete!\n";
+        fclose($file);
+        echo "----------------------------------\n";
+
+        return [
+            'document_name'    => $file_name,
+            'document_lines'   => $line_count,
+            'transferred_data' => $transfer_count,
+        ];
     }
-
-    sleep(10);
-
-    echo "Logs: \n";
-    echo "Total lines gathered from document " . $line_count . " \n";
-    echo "Total gathered data " . count($output) . " \n";
-
-    echo "Transferring gathered data to output.csv...\n";
-    createCSV($output_file, $output);
-    echo "End Log: \n\n";
-
-    sleep(10);
-    echo "Data transfer complete \n";
-    fclose($file);
-    echo "----------------------------------";
 }
+
 
 // Input getter
 function getInput() {
@@ -133,4 +175,6 @@ function createCSV($file_name, $data) {
     echo "Total of $transfer_count transferred data to $file_name \n";
 
     fclose($file);
+
+    return $transfer_count;
 }
